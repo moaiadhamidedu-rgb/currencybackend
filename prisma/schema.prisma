@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Denomination {
+  OLD_SYP
+  NEW_SYP
+}
+
+enum ObservationStatus {
+  VALID
+  REJECTED
+  OUTLIER
+}
+
+enum PublishedRateStatus {
+  FRESH
+  STALE
+  MANUAL
+}
+
+enum CollectionRunStatus {
+  RUNNING
+  COMPLETED
+  PARTIAL
+  FAILED
+}
+
+model Currency {
+  id            Int               @id @default(autoincrement())
+  code          String            @unique
+  name          String
+  symbol        String?
+  enabled       Boolean           @default(true)
+  observations  RateObservation[]
+  publishedRate PublishedRate?
+  calculations  RateCalculation[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model CurrencySource {
+  id                  Int               @id @default(autoincrement())
+  name                String
+  slug                String            @unique
+  url                 String
+  enabled             Boolean           @default(true)
+  priority            Int               @default(100)
+  denomination        Denomination      @default(NEW_SYP)
+  normalizationFactor Float             @default(1)
+  lastSuccessAt       DateTime?
+  lastFailureAt       DateTime?
+  lastError           String?
+  observations        RateObservation[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([enabled, priority])
+}
+
+model CollectionRun {
+  id           Int                 @id @default(autoincrement())
+  status       CollectionRunStatus @default(RUNNING)
+  startedAt    DateTime            @default(now())
+  completedAt  DateTime?
+  sourceCount  Int                 @default(0)
+  successCount Int                 @default(0)
+  failureCount Int                 @default(0)
+  observations RateObservation[]
+  calculations RateCalculation[]
+  errorSummary String?
+  createdAt    DateTime            @default(now())
+}
+
+model RateObservation {
+  id                 Int               @id @default(autoincrement())
+  currencyId         Int
+  sourceId           Int
+  collectionRunId    Int?
+  buy                Float
+  sell               Float
+  mid                Float
+  sourceDenomination Denomination
+  sourceUpdatedAt    DateTime?
+  fetchedAt          DateTime          @default(now())
+  sourceUrl          String
+  rawContentHash     String
+  relevantExcerpt    String?
+  extractionJson     String?
+  aiConfidence       Float?
+  status             ObservationStatus @default(VALID)
+  rejectionReason    String?
+  currency           Currency          @relation(fields: [currencyId], references: [id])
+  source             CurrencySource    @relation(fields: [sourceId], references: [id])
+  collectionRun      CollectionRun?    @relation(fields: [collectionRunId], references: [id])
+  createdAt          DateTime          @default(now())
+
+  @@index([currencyId, fetchedAt])
+  @@index([sourceId, fetchedAt])
+  @@index([collectionRunId, currencyId])
+}
+
+model RateCalculation {
+  id                   Int           @id @default(autoincrement())
+  currencyId           Int
+  collectionRunId      Int
+  medianBuy            Float
+  medianSell           Float
+  acceptedObservations Int
+  rejectedOutliers     Int
+  confidence           Float
+  calculatedAt         DateTime      @default(now())
+  currency             Currency      @relation(fields: [currencyId], references: [id])
+  collectionRun        CollectionRun @relation(fields: [collectionRunId], references: [id])
+
+  @@index([currencyId, calculatedAt])
+}
+
+model PublishedRate {
+  id          Int                 @id @default(autoincrement())
+  currencyId  Int                 @unique
+  buy         Float
+  sell        Float
+  mid         Float
+  confidence  Float
+  status      PublishedRateStatus @default(FRESH)
+  publishedAt DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  currency    Currency            @relation(fields: [currencyId], references: [id])
+}
