@@ -17,13 +17,25 @@ export abstract class PublicPageSource implements CurrencySourceAdapter {
     const maxCharacters = Number(
       this.config.get('SOURCE_CONTENT_MAX_CHARS') ?? 50_000,
     );
-    const response = await fetch(url, {
+    let response = await fetch(url, {
       headers: {
         Accept: 'text/html,application/json;q=0.9,*/*;q=0.8',
         'User-Agent': 'CurrencyTrackerBackend/1.0 (+public-rate-collector)',
       },
       signal: AbortSignal.timeout(timeout),
     });
+    if (!response.ok) {
+      const fallbackUrl = this.fallbackUrl(url, response.status);
+      if (fallbackUrl) {
+        response = await fetch(fallbackUrl, {
+          headers: {
+            Accept: 'text/plain,text/markdown;q=0.9,*/*;q=0.8',
+            'User-Agent': 'CurrencyTrackerBackend/1.0 (+public-rate-collector)',
+          },
+          signal: AbortSignal.timeout(timeout),
+        });
+      }
+    }
     if (!response.ok)
       throw new Error(`Source fetch failed with HTTP ${response.status}`);
     const rawContent = await response.text();
@@ -52,5 +64,11 @@ export abstract class PublicPageSource implements CurrencySourceAdapter {
 
   protected sourceTimestampIndicatesFreshness(): boolean {
     return true;
+  }
+
+  protected fallbackUrl(url: string, status: number): string | undefined {
+    void url;
+    void status;
+    return undefined;
   }
 }

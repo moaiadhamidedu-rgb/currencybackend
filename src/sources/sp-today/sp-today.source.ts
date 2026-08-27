@@ -7,7 +7,7 @@ export interface SpTodayRateRecord {
   code: string;
   buy: number;
   sell: number;
-  updatedAt: string;
+  updatedAt: string | null;
 }
 
 @Injectable()
@@ -36,13 +36,20 @@ export class SpTodaySource extends PublicPageSource {
   protected sourceTimestampIndicatesFreshness(): boolean {
     return false;
   }
+
+  protected fallbackUrl(url: string, status: number): string | undefined {
+    if (status !== 403) return undefined;
+    const sourceUrl = new URL(url);
+    sourceUrl.hostname = sourceUrl.hostname.replace(/^www\./, '');
+    return `https://r.jina.ai/http://${sourceUrl.host}${sourceUrl.pathname}${sourceUrl.search}`;
+  }
 }
 
 export function parseSpTodayCurrencyDataset(html: string): SpTodayRateRecord[] {
   const unescaped = html.replace(/\\"/g, '"');
   const pattern =
     /"code":"([A-Z]{3})".*?"cities":\{"damascus":\{"buy":([\d.]+),"sell":([\d.]+).*?"updated_at":"([^"]+)"/gs;
-  const records = [...unescaped.matchAll(pattern)].map(
+  const embeddedRecords = [...unescaped.matchAll(pattern)].map(
     ([, code, buy, sell, updatedAt]) => ({
       code,
       buy: Number(buy),
@@ -50,6 +57,17 @@ export function parseSpTodayCurrencyDataset(html: string): SpTodayRateRecord[] {
       updatedAt,
     }),
   );
+  const markdownPattern =
+    /^\| \[([A-Z]{3}) [^\]]+\]\([^)]*\) \| [\d,.]+ ([\d,]+) قديمة \| [\d,.]+ ([\d,]+) قديمة \|/gm;
+  const markdownRecords = [...html.matchAll(markdownPattern)].map(
+    ([, code, buy, sell]) => ({
+      code,
+      buy: Number(buy.replace(/,/g, '')),
+      sell: Number(sell.replace(/,/g, '')),
+      updatedAt: null,
+    }),
+  );
+  const records = embeddedRecords.length ? embeddedRecords : markdownRecords;
   if (records.length === 0) {
     throw new Error(
       'SP Today public page did not contain its currency dataset',
@@ -61,7 +79,7 @@ export function parseSpTodayCurrencyDataset(html: string): SpTodayRateRecord[] {
 export function extractSpTodayOldSypRates(html: string): string {
   const lines = parseSpTodayCurrencyDataset(html).map(
     ({ code, buy, sell, updatedAt }) =>
-      `currency=${code} base=SYP denomination=OLD_SYP buy=${buy} sell=${sell} sourceUpdatedAt=${updatedAt}`,
+      `currency=${code} base=SYP denomination=OLD_SYP buy=${buy} sell=${sell} sourceUpdatedAt=${updatedAt ?? 'null'}`,
   );
   return [
     'SP Today public currency dataset. Values below are explicitly OLD_SYP.',

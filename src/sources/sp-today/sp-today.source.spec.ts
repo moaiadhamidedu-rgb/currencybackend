@@ -35,4 +35,17 @@ describe('extractSpTodayOldSypRates', () => {
       },
     ]);
   });
+
+  it('parses OLD_SYP values from the markdown fallback', () => {
+    const markdown = `| [USD دولار أمريكي](http://sp-today.com/currency/us-dollar) | 132.00 13,200 قديمة | 132.50 13,250 قديمة | 0.00% | 132.00 | 132.00 | عرض |
+| [EUR يورو](http://sp-today.com/currency/euro) | 152.60 15,260 قديمة | 154.40 15,440 قديمة | 0.00% | 152.60 | 152.60 | عرض |`;
+
+    expect(parseSpTodayCurrencyDataset(markdown)).toEqual([
+      { code: 'USD', buy: 13200, sell: 13250, updatedAt: null },
+      { code: 'EUR', buy: 15260, sell: 15440, updatedAt: null },
+    ]);
+    expect(extractSpTodayOldSypRates(markdown)).toContain(
+      'currency=USD base=SYP denomination=OLD_SYP buy=13200 sell=13250 sourceUpdatedAt=null',
+    );
+  });
 });
