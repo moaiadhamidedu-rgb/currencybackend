@@ -65,6 +65,35 @@ npm run collect:now
 
 Only a content hash, source URL, short relevant excerpt, fetch time, and extraction JSON are retained; full HTML pages are not stored.
 
+## Permanent free Cloudflare deployment
+
+The same repository also contains a Cloudflare Worker version under
+`src/cloudflare`. It exposes the same public endpoints used by Flutter, stores
+published rates and collection audit records in D1, and refreshes SP Today every
+30 minutes using a Cron Trigger. SP Today is parsed deterministically in this
+version, so Gemini is not required for the Cloudflare deployment.
+
+After signing in to Cloudflare with Wrangler:
+
+```bash
+npm run cf:d1:create
+npm run cf:d1:remote
+npx wrangler secret put COLLECT_SECRET
+npm run cf:deploy
+```
+
+`cf:d1:create` adds the new D1 binding to `wrangler.jsonc`. After deployment,
+trigger the first collection without waiting for the next Cron run:
+
+```bash
+curl -X POST "https://currency-tracker-backend.YOUR-SUBDOMAIN.workers.dev/api/v1/collect" \
+  -H "Authorization: Bearer YOUR_COLLECT_SECRET"
+```
+
+Then verify `GET /api/v1/rates` and paste the Worker URL into the Flutter app at
+Settings > Server connection. Keep `COLLECT_SECRET` private; the public rates
+endpoints do not require authentication.
+
 ## Commands
 
 ```bash

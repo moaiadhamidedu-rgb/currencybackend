@@ -22,7 +22,13 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
     "db:setup": "tsx prisma/ensure-sqlite-db.ts && prisma migrate deploy && prisma db seed",
-    "collect:now": "ts-node -r tsconfig-paths/register src/collection/run-collection.ts"
+    "collect:now": "ts-node -r tsconfig-paths/register src/collection/run-collection.ts",
+    "cf:typecheck": "tsc -p tsconfig.cloudflare.json",
+    "cf:dev": "wrangler dev",
+    "cf:deploy": "wrangler deploy",
+    "cf:d1:create": "wrangler d1 create currency-tracker-db --binding DB --update-config",
+    "cf:d1:local": "wrangler d1 execute currency-tracker-db --local --file cloudflare/schema.sql",
+    "cf:d1:remote": "wrangler d1 execute currency-tracker-db --remote --file cloudflare/schema.sql"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -46,6 +52,7 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",
+    "@cloudflare/workers-types": "^5.20260827.1",
     "@types/supertest": "^7.0.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
@@ -62,7 +69,8 @@
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.23.12",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0"
+    "typescript-eslint": "^8.20.0",
+    "wrangler": "^4.0.0"
   },
   "jest": {
     "moduleFileExtensions": [
