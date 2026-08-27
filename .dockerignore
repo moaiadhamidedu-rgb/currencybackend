@@ -1,0 +1,14 @@
+.git
+.github
+.env
+.env.*
+node_modules
+dist
+coverage
+*.db
+*.db-journal
+*.log
+.idea
+.vscode
+test
+**/*.spec.ts

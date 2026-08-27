@@ -32,6 +32,13 @@ export class CollectionSchedulerService
     }, interval);
     this.timer.unref();
     this.logger.log(`Currency collection scheduled every ${interval}ms`);
+
+    const collectOnStartup =
+      this.config.get<string>('COLLECT_ON_STARTUP')?.toLowerCase() === 'true';
+    if (collectOnStartup) {
+      this.logger.log('Initial currency collection requested at startup');
+      void this.collectSafely();
+    }
   }
 
   onModuleDestroy(): void {
